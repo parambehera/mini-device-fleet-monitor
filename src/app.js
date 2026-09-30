@@ -5,6 +5,7 @@ const app = express();
 
 app.use(express.json());
 
+
 const deviceStore = new DeviceStore();
 
 /*
