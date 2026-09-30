@@ -319,8 +319,8 @@ I personally verified the implemented functionality by running the application, 
 
 ## Project Structure
 
+```text
 mini-device-fleet-monitor/
-│
 ├── src/
 │   ├── app.js
 │   └── deviceStore.js
@@ -333,7 +333,8 @@ mini-device-fleet-monitor/
 │
 ├── package.json
 ├── package-lock.json
-└── README.md
+├── README.md
+└── .gitignore
 
 ## Technology Stack
 
