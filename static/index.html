@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Mini Device Fleet Monitor</title>
+
+  <link rel="stylesheet" href="/style.css" />
+</head>
+
+<body>
+
+  <div class="container">
+
+    <header>
+      <h1>Mini Device Fleet Monitor</h1>
+      <p>Real-time device fleet status</p>
+    </header>
+
+    <section class="summary">
+
+      <div class="card">
+        <h3>Total Devices</h3>
+        <p id="total">0</p>
+      </div>
+
+      <div class="card online-card">
+        <h3>Online</h3>
+        <p id="online">0</p>
+      </div>
+
+      <div class="card offline-card">
+        <h3>Offline</h3>
+        <p id="offline">0</p>
+      </div>
+
+    </section>
+
+    <section class="devices-section">
+
+      <div class="section-header">
+        <h2>Devices</h2>
+        <button onclick="loadDevices()">Refresh</button>
+      </div>
+
+      <div class="table-container">
+
+        <table>
+
+          <thead>
+            <tr>
+              <th>Device ID</th>
+              <th>Name</th>
+              <th>Status</th>
+              <th>Last Heartbeat</th>
+            </tr>
+          </thead>
+
+          <tbody id="deviceTable">
+            <tr>
+              <td colspan="4">Loading devices...</td>
+            </tr>
+          </tbody>
+
+        </table>
+
+      </div>
+
+    </section>
+
+  </div>
+
+  <script src="/app.js"></script>
+
+</body>
+</html>
