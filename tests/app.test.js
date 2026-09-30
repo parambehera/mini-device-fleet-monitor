@@ -1,9 +1,26 @@
-const test = require('node:test');
-const assert = require('node:assert');
+const test = require("node:test");
+const assert = require("node:assert");
+const request = require("supertest");
 
-const request = require('supertest');
+const { app, deviceStore } = require("../src/app");
 
-const { app, deviceStore } = require('../src/app');
+let server;
+
+test.before(async () => {
+  server = app.listen(0);
+});
+
+test.after(async () => {
+  await new Promise((resolve, reject) => {
+    server.close((error) => {
+      if (error) {
+        reject(error);
+      } else {
+        resolve();
+      }
+    });
+  });
+});
 
 test.beforeEach(() => {
   deviceStore.devices.clear();
@@ -12,35 +29,41 @@ test.beforeEach(() => {
 /*
  * Device registration
  */
-test('should register a new device', async () => {
-  const response = await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
+test("should register a new device", async () => {
+  const response = await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
 
   assert.strictEqual(response.statusCode, 201);
 
   assert.deepStrictEqual(response.body, {
-    id: 'device-01',
-    name: 'Lab Device 01',
-    status: 'OFFLINE',
-    last_heartbeat: null,
+    id: "device-01",
+    name: "Lab Device 01",
+    status: "OFFLINE",
+    last_heartbeat: null
   });
 });
 
 /*
  * Duplicate registration
  */
-test('should reject duplicate device registration', async () => {
-  await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
+test("should reject duplicate device registration", async () => {
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
 
-  const response = await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Another Device',
-  });
+  const response = await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Another Device"
+    });
 
   assert.strictEqual(response.statusCode, 409);
 });
@@ -48,34 +71,36 @@ test('should reject duplicate device registration', async () => {
 /*
  * Heartbeat
  */
-test('should accept heartbeat from a registered device', async () => {
-  await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
+test("should accept heartbeat from a registered device", async () => {
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
 
   const timestamp = new Date().toISOString();
 
-  const response = await request(app)
-    .post('/devices/device-01/heartbeat')
+  const response = await request(server)
+    .post("/devices/device-01/heartbeat")
     .send({
       timestamp,
-      status: 'OK',
+      status: "OK"
     });
 
   assert.strictEqual(response.statusCode, 200);
-  assert.strictEqual(response.body.status, 'ONLINE');
+  assert.strictEqual(response.body.status, "ONLINE");
 });
 
 /*
  * Unknown device heartbeat
  */
-test('should reject heartbeat from unknown device', async () => {
-  const response = await request(app)
-    .post('/devices/device-99/heartbeat')
+test("should reject heartbeat from unknown device", async () => {
+  const response = await request(server)
+    .post("/devices/device-99/heartbeat")
     .send({
       timestamp: new Date().toISOString(),
-      status: 'OK',
+      status: "OK"
     });
 
   assert.strictEqual(response.statusCode, 404);
@@ -84,64 +109,69 @@ test('should reject heartbeat from unknown device', async () => {
 /*
  * Device should be ONLINE after heartbeat
  */
-test('device should be ONLINE after heartbeat', async () => {
-  await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
-
-  await request(app).post('/devices/device-01/heartbeat').send({
-    timestamp: new Date().toISOString(),
-    status: 'OK',
-  });
-
-  const response = await request(app).get('/devices/device-01');
-
-  assert.strictEqual(response.statusCode, 200);
-  assert.strictEqual(response.body.status, 'ONLINE');
-});
-
-/*
- * Device should become OFFLINE after 30 seconds
- *
- * We simulate passage of time instead of waiting 30 seconds.
- */
-test('device should become OFFLINE after 30 seconds', async () => {
-  await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
-
-  await request(app).post('/devices/device-01/heartbeat').send({
-    timestamp: new Date().toISOString(),
-    status: 'OK',
-  });
-
-  const device = deviceStore.getById('device-01');
-
-  device.lastHeartbeatReceivedAt = Date.now() - 30001;
-
-  const response = await request(app).get('/devices/device-01');
-
-  assert.strictEqual(response.statusCode, 200);
-  assert.strictEqual(response.body.status, 'OFFLINE');
-});
-
-/*
- * Exactly 30 seconds should still be ONLINE
- */
-/*
- * Exactly 30 seconds should still be ONLINE
- */
-test("device should remain ONLINE at exactly 30 seconds", async () => {
-  await request(app)
+test("device should be ONLINE after heartbeat", async () => {
+  await request(server)
     .post("/devices")
     .send({
       id: "device-01",
       name: "Lab Device 01"
     });
 
-  await request(app)
+  await request(server)
+    .post("/devices/device-01/heartbeat")
+    .send({
+      timestamp: new Date().toISOString(),
+      status: "OK"
+    });
+
+  const response = await request(server)
+    .get("/devices/device-01");
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.strictEqual(response.body.status, "ONLINE");
+});
+
+/*
+ * Device should become OFFLINE after 30 seconds
+ */
+test("device should become OFFLINE after 30 seconds", async () => {
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
+
+  await request(server)
+    .post("/devices/device-01/heartbeat")
+    .send({
+      timestamp: new Date().toISOString(),
+      status: "OK"
+    });
+
+  const device = deviceStore.getById("device-01");
+
+  device.lastHeartbeatReceivedAt = Date.now() - 30001;
+
+  const response = await request(server)
+    .get("/devices/device-01");
+
+  assert.strictEqual(response.statusCode, 200);
+  assert.strictEqual(response.body.status, "OFFLINE");
+});
+
+/*
+ * Exactly 30 seconds should still be ONLINE
+ */
+test("device should remain ONLINE at exactly 30 seconds", async () => {
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
+
+  await request(server)
     .post("/devices/device-01/heartbeat")
     .send({
       timestamp: new Date().toISOString(),
@@ -151,30 +181,35 @@ test("device should remain ONLINE at exactly 30 seconds", async () => {
   const device = deviceStore.getById("device-01");
 
   // Slightly below 30 seconds to avoid timing-related flakiness
-  device.lastHeartbeatReceivedAt =
-    Date.now() - 29900;
+  device.lastHeartbeatReceivedAt = Date.now() - 29900;
 
-  const response = await request(app)
+  const response = await request(server)
     .get("/devices/device-01");
 
   assert.strictEqual(response.statusCode, 200);
   assert.strictEqual(response.body.status, "ONLINE");
 });
+
 /*
  * List devices
  */
-test('should list all registered devices', async () => {
-  await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
+test("should list all registered devices", async () => {
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
 
-  await request(app).post('/devices').send({
-    id: 'device-02',
-    name: 'Lab Device 02',
-  });
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-02",
+      name: "Lab Device 02"
+    });
 
-  const response = await request(app).get('/devices');
+  const response = await request(server)
+    .get("/devices");
 
   assert.strictEqual(response.statusCode, 200);
   assert.strictEqual(response.body.length, 2);
@@ -183,29 +218,36 @@ test('should list all registered devices', async () => {
 /*
  * Fleet summary
  */
-test('should return fleet summary', async () => {
-  await request(app).post('/devices').send({
-    id: 'device-01',
-    name: 'Lab Device 01',
-  });
+test("should return fleet summary", async () => {
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-01",
+      name: "Lab Device 01"
+    });
 
-  await request(app).post('/devices').send({
-    id: 'device-02',
-    name: 'Lab Device 02',
-  });
+  await request(server)
+    .post("/devices")
+    .send({
+      id: "device-02",
+      name: "Lab Device 02"
+    });
 
-  await request(app).post('/devices/device-01/heartbeat').send({
-    timestamp: new Date().toISOString(),
-    status: 'OK',
-  });
+  await request(server)
+    .post("/devices/device-01/heartbeat")
+    .send({
+      timestamp: new Date().toISOString(),
+      status: "OK"
+    });
 
-  const response = await request(app).get('/summary');
+  const response = await request(server)
+    .get("/summary");
 
   assert.strictEqual(response.statusCode, 200);
 
   assert.deepStrictEqual(response.body, {
     total: 2,
     online: 1,
-    offline: 1,
+    offline: 1
   });
 });
